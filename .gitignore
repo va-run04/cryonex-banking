@@ -15,3 +15,17 @@ buildNumber.properties
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# macOS
+.DS_Store
+
+# Application config (contains secrets)
+**/application.yml
+
+# Uploaded documents (local dev storage)
+**/uploaded-documents/
