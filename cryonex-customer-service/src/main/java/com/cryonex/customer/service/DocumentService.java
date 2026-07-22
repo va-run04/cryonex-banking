@@ -5,13 +5,17 @@ import com.cryonex.customer.dto.response.DocumentResponseDto;
 import com.cryonex.customer.entity.Customer;
 import com.cryonex.customer.entity.CustomerAudit;
 import com.cryonex.customer.entity.CustomerDocument;
+import com.cryonex.customer.entity.CustomerKyc;
+import com.cryonex.customer.enums.KycStatus;
 import com.cryonex.customer.enums.VerificationStatus;
 import com.cryonex.customer.exception.BusinessValidationException;
 import com.cryonex.customer.exception.ResourceNotFoundException;
 import com.cryonex.customer.repository.CustomerAuditRepository;
 import com.cryonex.customer.repository.CustomerDocumentRepository;
+import com.cryonex.customer.repository.CustomerKycRepository;
 import com.cryonex.customer.repository.CustomerRepository;
 import com.cryonex.customer.util.IdGeneratorUtil;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,22 +29,26 @@ public class DocumentService {
     private final CustomerDocumentRepository documentRepository;
     private final CustomerRepository customerRepository;
     private final CustomerAuditRepository customerAuditRepository;
+    private final CustomerKycRepository kycRepository;
     private final IdGeneratorUtil idGeneratorUtil;
     private final StorageService storageService;
 
     public DocumentService(CustomerDocumentRepository documentRepository,
                            CustomerRepository customerRepository,
                            CustomerAuditRepository customerAuditRepository,
+                           CustomerKycRepository kycRepository,
                            IdGeneratorUtil idGeneratorUtil,
                            StorageService storageService) {
         this.documentRepository = documentRepository;
         this.customerRepository = customerRepository;
         this.customerAuditRepository = customerAuditRepository;
+        this.kycRepository = kycRepository;
         this.idGeneratorUtil = idGeneratorUtil;
         this.storageService = storageService;
     }
 
     // 1) UPLOAD DOCUMENT
+    @Transactional
     public DocumentResponseDto uploadDocument(String customerId, DocumentRequestDto request, MultipartFile file){
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("DOC_001", "Customer not found."));
@@ -61,9 +69,7 @@ public class DocumentService {
 
         String filePath = storageService.saveFile(customerId, file);
 
-        long nextSequence = 100001 + documentRepository.count();
-        String documentId = idGeneratorUtil.generateId("DOC", nextSequence);
-
+        String documentId = idGeneratorUtil.generateId("DOC", "DOCUMENT");
         CustomerDocument document = new CustomerDocument();
         document.setDocumentId(documentId);
         document.setCustomer(customer);
@@ -75,8 +81,20 @@ public class DocumentService {
 
         CustomerDocument savedDocument = documentRepository.save(document);
 
+        // Ensure a PENDING KYC record exists once any document is uploaded
+        CustomerKyc existingKyc = kycRepository.findByCustomer(customer).orElse(null);
+        if (existingKyc == null) {
+            CustomerKyc newKyc = new CustomerKyc();
+            newKyc.setKycId(idGeneratorUtil.generateId("KYC", "KYC"));
+            newKyc.setCustomer(customer);
+            newKyc.setPanVerified(false);
+            newKyc.setAadhaarVerified(false);
+            newKyc.setKycStatus(KycStatus.PENDING);
+            kycRepository.save(newKyc);
+        }
+
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));
         audit.setCustomer(customer);
         audit.setAction("DOCUMENT_UPLOADED");
         audit.setPerformedBy("SYSTEM");
@@ -117,6 +135,7 @@ public class DocumentService {
     }
 
     // 3) DOWNLOAD DOCUMENT
+
     public CustomerDocument getDocumentForDownload(String customerId, String documentId) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -133,6 +152,7 @@ public class DocumentService {
     }
 
     // 4) UPDATE DOCUMENT (RE-UPLOAD)
+    @Transactional
     public DocumentResponseDto updateDocument(String customerId, String documentId, String documentNumber, MultipartFile file) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -167,8 +187,7 @@ public class DocumentService {
         CustomerDocument updatedDocument = documentRepository.save(document);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
-        audit.setCustomer(customer);
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));        audit.setCustomer(customer);
         audit.setAction("DOCUMENT_UPDATED");
         audit.setPerformedBy("SYSTEM");
         audit.setNewValue("Document re-uploaded, verification reset to PENDING");
@@ -185,6 +204,7 @@ public class DocumentService {
     }
 
     // 5) DELETE DOCUMENT
+    @Transactional
     public void deleteDocument(String customerId, String documentId) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -202,7 +222,7 @@ public class DocumentService {
         documentRepository.delete(document);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));
         audit.setCustomer(customer);
         audit.setAction("DOCUMENT_DELETED");
         audit.setPerformedBy("SYSTEM");

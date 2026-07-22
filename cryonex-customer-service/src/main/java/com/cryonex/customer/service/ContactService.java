@@ -16,6 +16,7 @@ import com.cryonex.customer.repository.CustomerAuditRepository;
 import com.cryonex.customer.repository.CustomerContactRepository;
 import com.cryonex.customer.repository.CustomerRepository;
 import com.cryonex.customer.util.IdGeneratorUtil;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -38,6 +39,7 @@ public class ContactService {
 
 
     // 1) ADD CONTACT
+    @Transactional
     public ContactResponseDto addContact(String customerId, ContactRequestDto request) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -56,8 +58,7 @@ public class ContactService {
             throw new DuplicateResourceException("CNT_004", "Email already exists.");
         }
 
-        long nextSequence = 100001 + contactRepository.count();
-        String contactId = idGeneratorUtil.generateId("CNT", nextSequence);
+        String contactId = idGeneratorUtil.generateId("CNT", "CONTACT");
 
         CustomerContact contact = new CustomerContact();
         contact.setContactId(contactId);
@@ -71,8 +72,7 @@ public class ContactService {
         CustomerContact savedContact = contactRepository.save(contact);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
-        audit.setCustomer(customer);
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));        audit.setCustomer(customer);
         audit.setAction("CONTACT_ADDED");
         audit.setPerformedBy("SYSTEM");
         audit.setNewValue("Contact details added");
@@ -110,6 +110,7 @@ public class ContactService {
     }
 
     // 3) UPDATE MOBILE
+    @Transactional
     public void updateMobile(String customerId, MobileUpdateRequestDto request) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -128,8 +129,7 @@ public class ContactService {
         contactRepository.save(contact);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
-        audit.setCustomer(customer);
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));        audit.setCustomer(customer);
         audit.setAction("MOBILE_UPDATED");
         audit.setPerformedBy("SYSTEM");
         audit.setOldValue(oldMobile);
@@ -139,6 +139,7 @@ public class ContactService {
     }
 
     // 4) UPDATE EMAIL
+    @Transactional
     public void updateEmail(String customerId, EmailUpdateRequestDto request) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -157,8 +158,7 @@ public class ContactService {
         contactRepository.save(contact);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
-        audit.setCustomer(customer);
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));        audit.setCustomer(customer);
         audit.setAction("EMAIL_UPDATED");
         audit.setPerformedBy("SYSTEM");
         audit.setOldValue(oldEmail);
@@ -167,6 +167,7 @@ public class ContactService {
 
     }
     // 5) UPDATE PREFERRED CONTACT MODE
+    @Transactional
     public void updatePreferredContactMode(String customerId, PreferredContactModeUpdateRequestDto request) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -181,8 +182,7 @@ public class ContactService {
         contactRepository.save(contact);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
-        audit.setCustomer(customer);
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));        audit.setCustomer(customer);
         audit.setAction("PREFERRED_CONTACT_MODE_UPDATED");
         audit.setPerformedBy("SYSTEM");
         audit.setOldValue(oldMode != null ? oldMode.toString() : null);

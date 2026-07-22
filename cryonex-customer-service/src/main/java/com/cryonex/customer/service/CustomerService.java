@@ -15,6 +15,7 @@ import com.cryonex.customer.exception.ResourceNotFoundException;
 import com.cryonex.customer.repository.CustomerAuditRepository;
 import com.cryonex.customer.repository.CustomerRepository;
 import com.cryonex.customer.util.IdGeneratorUtil;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -35,6 +36,7 @@ public class CustomerService {
 
 
     // CREATE CUSTOMER
+    @Transactional
     public CustomerCreateResponseDto createCustomer(CustomerRequestDto request){
         if(customerRepository.existsByPanNumber(request.getPanNumber())){
             throw new DuplicateResourceException("CUS_101", "PAN Number already exists.");
@@ -47,9 +49,8 @@ public class CustomerService {
         if (age < 18) {
             throw new BusinessValidationException("CUS_103", "Customer age should be 18 years or above.");
         }
-        long nextSequence = 100001 + customerRepository.count();
-        String customerId = idGeneratorUtil.generateId("CUS", nextSequence);
-        String cifNumber = idGeneratorUtil.generateId("CIF", nextSequence);
+        String customerId = idGeneratorUtil.generateId("CUS", "CUSTOMER");
+        String cifNumber = idGeneratorUtil.generateId("CIF", "CIF");
 
         Customer customer = new Customer();
         customer.setCustomerId(customerId);
@@ -72,7 +73,7 @@ public class CustomerService {
         Customer savedCustomer = customerRepository.save(customer);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));
         audit.setCustomer(savedCustomer);
         audit.setAction("CUSTOMER_CREATED");
         audit.setPerformedBy("SYSTEM");
@@ -108,6 +109,7 @@ public class CustomerService {
     }
 
     // 3) UPDATE CUSTOMER
+    @Transactional
     public CustomerResponseDto updateCustomer(String customerId, CustomerUpdateRequestDto request) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -138,7 +140,7 @@ public class CustomerService {
         Customer updatedCustomer = customerRepository.save(customer);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));
         audit.setCustomer(updatedCustomer);
         audit.setAction("CUSTOMER_UPDATED");
         audit.setPerformedBy("SYSTEM");
@@ -160,6 +162,7 @@ public class CustomerService {
     }
 
     //4) UPDATE CUSTOMER STATUS
+    @Transactional
     public void updateCustomerStatus(String customerId, CustomerStatusUpdateRequestDto request) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -171,7 +174,7 @@ public class CustomerService {
         customerRepository.save(customer);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));
         audit.setCustomer(customer);
         audit.setAction("CUSTOMER_STATUS_UPDATED");
         audit.setPerformedBy("SYSTEM");
@@ -182,6 +185,7 @@ public class CustomerService {
     }
 
     //5) DELETE CUSTOMER
+    @Transactional
     public void deleteCustomer(String customerId) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -193,7 +197,7 @@ public class CustomerService {
         customerRepository.save(customer);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));
         audit.setCustomer(customer);
         audit.setAction("CUSTOMER_DEACTIVATED");
         audit.setPerformedBy("SYSTEM");

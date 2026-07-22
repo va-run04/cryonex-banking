@@ -12,6 +12,7 @@ import com.cryonex.customer.repository.CustomerAddressRepository;
 import com.cryonex.customer.repository.CustomerAuditRepository;
 import com.cryonex.customer.repository.CustomerRepository;
 import com.cryonex.customer.util.IdGeneratorUtil;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class AddressService {
     }
 
     // 1) ADD ADDRESS
+    @Transactional
     public AddressResponseDto addAddress(String customerId, AddressRequestDto request) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -51,8 +53,7 @@ public class AddressService {
             }
         }
 
-        long nextSequence = 100001 + addressRepository.count();
-        String addressId = idGeneratorUtil.generateId("ADDR", nextSequence);
+        String addressId = idGeneratorUtil.generateId("ADDR", "ADDRESS");
 
         CustomerAddress address = new CustomerAddress();
         address.setAddressId(addressId);
@@ -71,7 +72,7 @@ public class AddressService {
         CustomerAddress savedAddress = addressRepository.save(address);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));
         audit.setCustomer(customer);
         audit.setAction("ADDRESS_ADDED");
         audit.setPerformedBy("SYSTEM");
@@ -124,6 +125,7 @@ public class AddressService {
     }
 
     // 3) UPDATE ADDRESS
+    @Transactional
     public AddressResponseDto updateAddress(String customerId, String addressId, AddressUpdateRequestDto request) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -171,8 +173,7 @@ public class AddressService {
         CustomerAddress updatedAddress = addressRepository.save(address);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
-        audit.setCustomer(customer);
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));        audit.setCustomer(customer);
         audit.setAction("ADDRESS_UPDATED");
         audit.setPerformedBy("SYSTEM");
         audit.setNewValue("Address updated: " + addressId);
@@ -196,6 +197,7 @@ public class AddressService {
 
 
     // 4) DELETE ADDRESS
+    @Transactional
     public void deleteAddress(String customerId, String addressId) {
 
         Customer customer = customerRepository.findById(customerId)
@@ -211,7 +213,7 @@ public class AddressService {
         addressRepository.delete(address);
 
         CustomerAudit audit = new CustomerAudit();
-        audit.setAuditId(idGeneratorUtil.generateId("AUD", 100000 + customerAuditRepository.count()));
+        audit.setAuditId(idGeneratorUtil.generateId("AUD", "AUDIT"));
         audit.setCustomer(customer);
         audit.setAction("ADDRESS_DELETED");
         audit.setPerformedBy("SYSTEM");
