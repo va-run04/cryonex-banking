@@ -15,11 +15,19 @@ import com.cryonex.customer.exception.ResourceNotFoundException;
 import com.cryonex.customer.repository.CustomerAuditRepository;
 import com.cryonex.customer.repository.CustomerRepository;
 import com.cryonex.customer.util.IdGeneratorUtil;
+import jakarta.persistence.criteria.Predicate;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.ArrayList;
+import java.util.List;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import com.cryonex.customer.entity.CustomerContact;
 
 @Service
 public class CustomerService {
@@ -35,7 +43,7 @@ public class CustomerService {
     }
 
 
-    // CREATE CUSTOMER
+    // 1) CREATE CUSTOMER
     @Transactional
     public CustomerCreateResponseDto createCustomer(CustomerRequestDto request){
         if(customerRepository.existsByPanNumber(request.getPanNumber())){
@@ -205,4 +213,54 @@ public class CustomerService {
         audit.setNewValue(CustomerStatus.INACTIVE.toString());
         customerAuditRepository.save(audit);
     }
+
+
+    // 6) SEARCH CUSTOMERS
+    public Page<CustomerResponseDto> searchCustomers(String customerId, String cif, String mobile,
+                                                     String pan, String aadhaar, String status,
+                                                     Pageable pageable) {
+
+        Specification<Customer> spec = (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (customerId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("customerId"), customerId));
+            }
+            if (cif != null) {
+                predicates.add(criteriaBuilder.equal(root.get("cifNumber"), cif));
+            }
+            if (pan != null) {
+                predicates.add(criteriaBuilder.equal(root.get("panNumber"), pan));
+            }
+            if (aadhaar != null) {
+                predicates.add(criteriaBuilder.equal(root.get("aadhaarNumber"), aadhaar));
+            }
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("customerStatus"), CustomerStatus.valueOf(status)));
+            }
+            if (mobile != null) {
+                Join<Customer, CustomerContact> contactJoin = root.join("contact", JoinType.LEFT);
+                predicates.add(criteriaBuilder.equal(contactJoin.get("mobileNumber"), mobile));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Customer> customerPage = customerRepository.findAll(spec, pageable);
+
+        return customerPage.map(customer -> {
+            CustomerResponseDto dto = new CustomerResponseDto();
+            dto.setCustomerId(customer.getCustomerId());
+            dto.setCifNumber(customer.getCifNumber());
+
+            String fullName = customer.getFirstName() +
+                    (customer.getMiddleName() != null ? " " + customer.getMiddleName() : "") +
+                    " " + customer.getLastName();
+            dto.setCustomerName(fullName);
+
+            dto.setStatus(customer.getCustomerStatus());
+            return dto;
+        });
+    }
+
 }

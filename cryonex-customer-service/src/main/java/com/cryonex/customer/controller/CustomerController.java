@@ -1,4 +1,7 @@
 package com.cryonex.customer.controller;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import com.cryonex.customer.dto.ApiResponse;
 import com.cryonex.customer.dto.request.CustomerRequestDto;
@@ -60,6 +63,22 @@ public class CustomerController {
     public ResponseEntity<ApiResponse> deleteCustomer(@PathVariable String customerId) {
         customerService.deleteCustomer(customerId);
         return ResponseEntity.ok(ApiResponse.success("Customer Deactivated Successfully.", null));
+    }
+
+    // Searches customers with optional filters
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse> searchCustomers(@RequestParam(required = false) String customerId,
+                                                       @RequestParam(required = false) String cif,
+                                                       @RequestParam(required = false) String mobile,
+                                                       @RequestParam(required = false) String pan,
+                                                       @RequestParam(required = false) String aadhaar,
+                                                       @RequestParam(required = false) String status,
+                                                       @RequestParam(defaultValue = "0") int page,
+                                                       @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<CustomerResponseDto> response = customerService.searchCustomers(customerId, cif, mobile, pan, aadhaar, status, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Customer search completed successfully.", response));
     }
 
 }
