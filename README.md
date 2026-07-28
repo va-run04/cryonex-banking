@@ -18,7 +18,6 @@ Built end-to-end as a set of 46 REST endpoints across 8 business domains, fully 
 - [Authentication](#authentication)
 - [API Reference](#api-reference)
 - [Notable Engineering Decisions](#notable-engineering-decisions)
-- [Roadmap](#roadmap)
 
 ---
 
