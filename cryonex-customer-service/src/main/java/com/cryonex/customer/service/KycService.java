@@ -6,7 +6,6 @@ import com.cryonex.customer.dto.request.KycVerifyRequestDto;
 import com.cryonex.customer.dto.response.KycResponseDto;
 import com.cryonex.customer.entity.Customer;
 import com.cryonex.customer.entity.CustomerAudit;
-import com.cryonex.customer.entity.CustomerDocument;
 import com.cryonex.customer.entity.CustomerKyc;
 import com.cryonex.customer.enums.DocumentType;
 import com.cryonex.customer.enums.KycStatus;
