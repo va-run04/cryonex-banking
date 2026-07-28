@@ -1,7 +1,4 @@
 package com.cryonex.customer.controller;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 import com.cryonex.customer.dto.ApiResponse;
 import com.cryonex.customer.dto.request.CustomerRequestDto;
@@ -11,8 +8,12 @@ import com.cryonex.customer.dto.response.CustomerCreateResponseDto;
 import com.cryonex.customer.dto.response.CustomerResponseDto;
 import com.cryonex.customer.service.CustomerService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,8 +26,8 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
-    // Creates a new customer record
     @PostMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> createCustomer(@Valid @RequestBody CustomerRequestDto request) {
         CustomerCreateResponseDto response = customerService.createCustomer(request);
         return new ResponseEntity<>(
@@ -35,38 +36,15 @@ public class CustomerController {
         );
     }
 
-    // Retrieves a customer's details by their ID
     @GetMapping("/{customerId}")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> getCustomerDetails(@PathVariable String customerId) {
         CustomerResponseDto response = customerService.getCustomerDetails(customerId);
         return ResponseEntity.ok(ApiResponse.success("Customer retrieved successfully.", response));
     }
 
-    // Updates a customer's editable fields
-    @PutMapping("/{customerId}")
-    public ResponseEntity<ApiResponse> updateCustomer(@PathVariable String customerId,
-                                                      @RequestBody CustomerUpdateRequestDto request) {
-        CustomerResponseDto response = customerService.updateCustomer(customerId, request);
-        return ResponseEntity.ok(ApiResponse.success("Customer updated successfully.", response));
-    }
-
-    // Updates a customer's status (ACTIVE, INACTIVE, BLOCKED, DECEASED, DORMANT)
-    @PutMapping("/{customerId}/status")
-    public ResponseEntity<ApiResponse> updateCustomerStatus(@PathVariable String customerId,
-                                                            @Valid @RequestBody CustomerStatusUpdateRequestDto request) {
-        customerService.updateCustomerStatus(customerId, request);
-        return ResponseEntity.ok(ApiResponse.success("Customer status updated successfully.", null));
-    }
-
-    // Soft-deletes a customer by deactivating their record
-    @DeleteMapping("/{customerId}")
-    public ResponseEntity<ApiResponse> deleteCustomer(@PathVariable String customerId) {
-        customerService.deleteCustomer(customerId);
-        return ResponseEntity.ok(ApiResponse.success("Customer Deactivated Successfully.", null));
-    }
-
-    // Searches customers with optional filters
     @GetMapping("/search")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> searchCustomers(@RequestParam(required = false) String customerId,
                                                        @RequestParam(required = false) String cif,
                                                        @RequestParam(required = false) String mobile,
@@ -75,10 +53,32 @@ public class CustomerController {
                                                        @RequestParam(required = false) String status,
                                                        @RequestParam(defaultValue = "0") int page,
                                                        @RequestParam(defaultValue = "10") int size) {
-
         Pageable pageable = PageRequest.of(page, size);
         Page<CustomerResponseDto> response = customerService.searchCustomers(customerId, cif, mobile, pan, aadhaar, status, pageable);
         return ResponseEntity.ok(ApiResponse.success("Customer search completed successfully.", response));
+    }
+
+    @PutMapping("/{customerId}")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> updateCustomer(@PathVariable String customerId,
+                                                      @RequestBody CustomerUpdateRequestDto request) {
+        CustomerResponseDto response = customerService.updateCustomer(customerId, request);
+        return ResponseEntity.ok(ApiResponse.success("Customer updated successfully.", response));
+    }
+
+    @PutMapping("/{customerId}/status")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> updateCustomerStatus(@PathVariable String customerId,
+                                                            @Valid @RequestBody CustomerStatusUpdateRequestDto request) {
+        customerService.updateCustomerStatus(customerId, request);
+        return ResponseEntity.ok(ApiResponse.success("Customer status updated successfully.", null));
+    }
+
+    @DeleteMapping("/{customerId}")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> deleteCustomer(@PathVariable String customerId) {
+        customerService.deleteCustomer(customerId);
+        return ResponseEntity.ok(ApiResponse.success("Customer Deactivated Successfully.", null));
     }
 
 }

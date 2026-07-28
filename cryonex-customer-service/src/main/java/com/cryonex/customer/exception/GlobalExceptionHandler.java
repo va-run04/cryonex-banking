@@ -3,6 +3,7 @@ package com.cryonex.customer.exception;
 import com.cryonex.customer.dto.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -37,6 +38,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse> handleGenericException(Exception ex){
         ApiResponse response = ApiResponse.error("INTERNAL_ERROR", "Something went wrong");
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiResponse> handleAuthorizationDenied(AuthorizationDeniedException ex) {
+        ApiResponse response = ApiResponse.error("AUTH_403", "You do not have permission to perform this action.");
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
 
 

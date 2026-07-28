@@ -8,6 +8,7 @@ import com.cryonex.customer.service.AddressService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,8 +23,8 @@ public class AddressController {
         this.addressService = addressService;
     }
 
-    // Adds a new address for the given customer
     @PostMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> addAddress(@PathVariable String customerId,
                                                   @Valid @RequestBody AddressRequestDto request) {
         AddressResponseDto response = addressService.addAddress(customerId, request);
@@ -33,15 +34,15 @@ public class AddressController {
         );
     }
 
-    // Retrieves all addresses for the given customer
     @GetMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> getAddresses(@PathVariable String customerId) {
         List<AddressResponseDto> response = addressService.getAddresses(customerId);
         return ResponseEntity.ok(ApiResponse.success("Addresses retrieved successfully.", response));
     }
 
-    // Updates an existing address for the given customer
     @PutMapping("/{addressId}")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> updateAddress(@PathVariable String customerId,
                                                      @PathVariable String addressId,
                                                      @RequestBody AddressUpdateRequestDto request) {
@@ -49,8 +50,8 @@ public class AddressController {
         return ResponseEntity.ok(ApiResponse.success("Address updated successfully.", response));
     }
 
-    // Deletes an address for the given customer
     @DeleteMapping("/{addressId}")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> deleteAddress(@PathVariable String customerId,
                                                      @PathVariable String addressId) {
         addressService.deleteAddress(customerId, addressId);

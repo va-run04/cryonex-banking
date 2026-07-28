@@ -8,6 +8,7 @@ import com.cryonex.customer.dto.response.KycResponseDto;
 import com.cryonex.customer.service.KycService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,31 +21,31 @@ public class KycController {
         this.kycService = kycService;
     }
 
-    // Verifies a customer's KYC
     @PostMapping("/verify")
+    @PreAuthorize("hasRole('KYC_OFFICER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> verifyKyc(@PathVariable String customerId,
                                                  @Valid @RequestBody KycVerifyRequestDto request) {
         KycResponseDto response = kycService.verifyKyc(customerId, request);
         return ResponseEntity.ok(ApiResponse.success("Customer KYC verified successfully.", response));
     }
 
-    // Retrieves a customer's KYC status
     @GetMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('KYC_OFFICER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> getKycStatus(@PathVariable String customerId) {
         KycResponseDto response = kycService.getKycStatus(customerId);
         return ResponseEntity.ok(ApiResponse.success("KYC status retrieved successfully.", response));
     }
 
-    // Rejects a customer's KYC
     @PutMapping("/reject")
+    @PreAuthorize("hasRole('KYC_OFFICER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> rejectKyc(@PathVariable String customerId,
                                                  @Valid @RequestBody KycRejectRequestDto request) {
         KycResponseDto response = kycService.rejectKyc(customerId, request);
         return ResponseEntity.ok(ApiResponse.success("Customer KYC rejected successfully.", response));
     }
 
-    // Resubmits a customer's KYC after rejection
     @PostMapping("/resubmit")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> resubmitKyc(@PathVariable String customerId,
                                                    @RequestBody KycResubmitRequestDto request) {
         KycResponseDto response = kycService.resubmitKyc(customerId, request);

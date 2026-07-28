@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -24,23 +25,23 @@ public class AuditController {
         this.auditService = auditService;
     }
 
-    // Retrieves full audit history for a customer
     @GetMapping
+    @PreAuthorize("hasRole('OPERATIONS_EXECUTIVE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> getAuditHistory(@PathVariable String customerId) {
         List<AuditResponseDto> response = auditService.getAuditHistory(customerId);
         return ResponseEntity.ok(ApiResponse.success("Audit history retrieved successfully.", response));
     }
 
-    // Retrieves a single audit record's details
     @GetMapping("/{auditId}")
+    @PreAuthorize("hasRole('OPERATIONS_EXECUTIVE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> getAuditRecord(@PathVariable String customerId,
                                                       @PathVariable String auditId) {
         AuditResponseDto response = auditService.getAuditRecord(customerId, auditId);
         return ResponseEntity.ok(ApiResponse.success("Audit record retrieved successfully.", response));
     }
 
-    // Searches audit records with optional filters
     @GetMapping("/search")
+    @PreAuthorize("hasRole('OPERATIONS_EXECUTIVE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> searchAudit(@PathVariable String customerId,
                                                    @RequestParam(required = false) String action,
                                                    @RequestParam(required = false) String performedBy,
@@ -54,8 +55,8 @@ public class AuditController {
         return ResponseEntity.ok(ApiResponse.success("Audit search completed successfully.", response));
     }
 
-    // Exports audit report as PDF or Excel
     @GetMapping("/export")
+    @PreAuthorize("hasRole('OPERATIONS_EXECUTIVE') or hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportAuditReport(@PathVariable String customerId,
                                                     @RequestParam String format) {
 

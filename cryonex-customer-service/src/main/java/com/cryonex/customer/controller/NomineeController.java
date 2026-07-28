@@ -8,6 +8,7 @@ import com.cryonex.customer.service.NomineeService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,8 +23,8 @@ public class NomineeController {
         this.nomineeService = nomineeService;
     }
 
-    // Adds a new nominee for the customer
     @PostMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> addNominee(@PathVariable String customerId,
                                                   @Valid @RequestBody NomineeRequestDto request) {
         NomineeResponseDto response = nomineeService.addNominee(customerId, request);
@@ -33,15 +34,15 @@ public class NomineeController {
         );
     }
 
-    // Retrieves all nominees for the customer
     @GetMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> getNominees(@PathVariable String customerId) {
         List<NomineeResponseDto> response = nomineeService.getNominees(customerId);
         return ResponseEntity.ok(ApiResponse.success("Nominees retrieved successfully.", response));
     }
 
-    // Updates an existing nominee
     @PutMapping("/{nomineeId}")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> updateNominee(@PathVariable String customerId,
                                                      @PathVariable String nomineeId,
                                                      @RequestBody NomineeUpdateRequestDto request) {
@@ -49,16 +50,16 @@ public class NomineeController {
         return ResponseEntity.ok(ApiResponse.success("Nominee updated successfully.", response));
     }
 
-    // Deletes a nominee
     @DeleteMapping("/{nomineeId}")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> deleteNominee(@PathVariable String customerId,
                                                      @PathVariable String nomineeId) {
         nomineeService.deleteNominee(customerId, nomineeId);
         return ResponseEntity.ok(ApiResponse.success("Nominee deleted successfully.", null));
     }
 
-    // Verifies a nominee
     @PutMapping("/{nomineeId}/verify")
+    @PreAuthorize("hasRole('KYC_OFFICER') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> verifyNominee(@PathVariable String customerId,
                                                      @PathVariable String nomineeId) {
         NomineeResponseDto response = nomineeService.verifyNominee(customerId, nomineeId);

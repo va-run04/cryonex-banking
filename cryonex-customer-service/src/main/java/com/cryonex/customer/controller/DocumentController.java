@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,8 +25,8 @@ public class DocumentController {
         this.documentService = documentService;
     }
 
-    // Uploads a new document for the customer
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> uploadDocument(@PathVariable String customerId,
                                                       @RequestParam("documentType") String documentType,
                                                       @RequestParam("documentNumber") String documentNumber,
@@ -42,15 +43,15 @@ public class DocumentController {
         );
     }
 
-    // Retrieves metadata for all documents belonging to the customer
     @GetMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> getDocuments(@PathVariable String customerId) {
         List<DocumentResponseDto> response = documentService.getDocuments(customerId);
         return ResponseEntity.ok(ApiResponse.success("Documents retrieved successfully.", response));
     }
 
-    // Downloads the actual document file
     @GetMapping("/{documentId}")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<byte[]> downloadDocument(@PathVariable String customerId,
                                                    @PathVariable String documentId) {
 
@@ -63,8 +64,8 @@ public class DocumentController {
                 .body(fileContent);
     }
 
-    // Updates (re-uploads) an existing document
     @PutMapping(value = "/{documentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> updateDocument(@PathVariable String customerId,
                                                       @PathVariable String documentId,
                                                       @RequestParam(value = "documentNumber", required = false) String documentNumber,
@@ -73,8 +74,8 @@ public class DocumentController {
         return ResponseEntity.ok(ApiResponse.success("Document updated successfully.", response));
     }
 
-    // Deletes a document
     @DeleteMapping("/{documentId}")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> deleteDocument(@PathVariable String customerId,
                                                       @PathVariable String documentId) {
         documentService.deleteDocument(customerId, documentId);

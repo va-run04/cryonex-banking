@@ -10,6 +10,7 @@ import com.cryonex.customer.service.PreferenceService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,8 +23,8 @@ public class PreferenceController {
         this.preferenceService = preferenceService;
     }
 
-    // Creates preferences for a customer
     @PostMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> createPreference(@PathVariable String customerId,
                                                         @Valid @RequestBody PreferenceRequestDto request) {
         PreferenceResponseDto response = preferenceService.createPreference(customerId, request);
@@ -33,31 +34,31 @@ public class PreferenceController {
         );
     }
 
-    // Retrieves a customer's preferences
     @GetMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> getPreferences(@PathVariable String customerId) {
         PreferenceResponseDto response = preferenceService.getPreferences(customerId);
         return ResponseEntity.ok(ApiResponse.success("Preferences retrieved successfully.", response));
     }
 
-    // Updates all preference fields
     @PutMapping
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> updatePreferences(@PathVariable String customerId,
                                                          @RequestBody PreferenceUpdateRequestDto request) {
         PreferenceResponseDto response = preferenceService.updatePreferences(customerId, request);
         return ResponseEntity.ok(ApiResponse.success("Preferences updated successfully.", response));
     }
 
-    // Updates notification (email/SMS) preferences
     @PutMapping("/notifications")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> updateNotificationPreferences(@PathVariable String customerId,
                                                                      @RequestBody NotificationUpdateRequestDto request) {
         PreferenceResponseDto response = preferenceService.updateNotificationPreferences(customerId, request);
         return ResponseEntity.ok(ApiResponse.success("Notification preferences updated successfully.", response));
     }
 
-    // Updates marketing consent
     @PutMapping("/marketing")
+    @PreAuthorize("hasRole('BANK_EMPLOYEE') or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> updateMarketingPreference(@PathVariable String customerId,
                                                                  @Valid @RequestBody MarketingUpdateRequestDto request) {
         PreferenceResponseDto response = preferenceService.updateMarketingPreference(customerId, request);
