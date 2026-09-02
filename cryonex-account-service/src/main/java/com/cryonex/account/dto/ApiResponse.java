@@ -22,7 +22,6 @@ public class ApiResponse {
         this.data = data;
     }
 
-
     //success
     public static ApiResponse success(String message, Object data){
         return new ApiResponse("SUCCESS", message, data);
