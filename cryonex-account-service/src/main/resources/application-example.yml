@@ -19,6 +19,9 @@ spring:
       hibernate:
         format_sql: true
         open-in-view: false
+jwt:
+  secret: your_jwt_secret_key_must_be_at_least_256_bits_long
+  expiration: 86400000
 
 logging:
   level:
