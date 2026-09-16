@@ -16,13 +16,18 @@ public class IdGeneratorUtil {
 
     @Transactional
     public String generateId(String prefix, String entityName){
+        return generateId(prefix, entityName, 100000L);
+    }
+
+    @Transactional
+    public String generateId(String prefix, String entityName, long startingValue){
 
         IdSequence sequence = idSequenceRepository.findByEntityNameToUpdate(entityName).orElse(null);
 
         if(sequence == null){
             sequence = new IdSequence();
             sequence.setEntityName(entityName);
-            sequence.setCurrentValue(100000L);
+            sequence.setCurrentValue(startingValue);
         }
 
         long nextValue = sequence.getCurrentValue() + 1;

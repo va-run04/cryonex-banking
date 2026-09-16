@@ -22,12 +22,12 @@ public class ApiResponse {
         this.data = data;
     }
 
-    //success
+    //success // factory method
     public static ApiResponse success(String message, Object data){
         return new ApiResponse("SUCCESS", message, data);
     }
 
-    //failed
+    //failed // factory method
     public static ApiResponse error(String errorCode, String message){
         ApiResponse response = new ApiResponse("FAILED", message, null);
         response.errorCode = errorCode;
