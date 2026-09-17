@@ -1,7 +1,11 @@
 package com.cryonex.account.service;
 
 import com.cryonex.account.dto.request.CreateAccountRequest;
+import com.cryonex.account.dto.request.UpdateMinimumBalanceRequest;
+import com.cryonex.account.dto.request.UpdateNicknameRequest;
+import com.cryonex.account.dto.response.AccountBalanceResponse;
 import com.cryonex.account.dto.response.AccountResponse;
+import com.cryonex.account.dto.response.CustomerAccountResponse;
 import com.cryonex.account.entity.Account;
 import com.cryonex.account.entity.AccountType;
 import com.cryonex.account.enums.AccountStatus;
@@ -11,8 +15,8 @@ import com.cryonex.account.repository.AccountRepository;
 import com.cryonex.account.repository.AccountTypeRepository;
 import com.cryonex.account.util.IdGeneratorUtil;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class AccountService {
@@ -29,6 +33,7 @@ public class AccountService {
         this.accountTypeRepository = accountTypeRepository;
     }
 
+    // 1) CreateAccount
     public AccountResponse createAccount(CreateAccountRequest request){
         AccountType accountType = accountTypeRepository.findByTypeCode(request.getAccountType()).
                 orElseThrow(() -> new ResourceNotFoundException("ACC_TYPE__002", "Invalid account type: " + request.getAccountType()));
@@ -66,6 +71,53 @@ public class AccountService {
         response.setIfsc(account.getIfscCode());
         response.setAccountStatus(account.getAccountStatus().name());
         return response;
+    }
+
+
+    // 2) Get Account Balance
+
+    public AccountBalanceResponse getAccountBalance(String accountId) {
+        Account account = accountRepository.findById(accountId).orElseThrow(() -> new ResourceNotFoundException("ACC_404", "Account Not Found"));
+
+        return mapToBalanceResponse(account);
+    }
+
+    private AccountBalanceResponse mapToBalanceResponse(Account account){
+        AccountBalanceResponse response = new AccountBalanceResponse();
+        response.setAccountNumber(account.getAccountNumber());
+        response.setAvailableBalance(account.getAvailableBalance());
+        response.setLedgerBalance(account.getLedgerBalance());
+        return response;
+    }
+
+    // 3) Update NickName
+    public void updateNickName(String accountId, UpdateNicknameRequest request){
+        Account account = accountRepository.findById(accountId).orElseThrow(() ->new ResourceNotFoundException("ACC_404", "Account Not found"));
+        account.setNickname(request.getNickname());
+        accountRepository.save(account);
+    }
+
+    //4) get Customer Accounts
+    public List<CustomerAccountResponse> getCustomerAccounts(String customerId){
+        List<Account> accounts = accountRepository.findByCustomerId(customerId);
+
+        return accounts.stream().map(this::mapToCustomerAccountResponse).toList();
+    }
+
+    private CustomerAccountResponse mapToCustomerAccountResponse(Account account){
+        CustomerAccountResponse response = new CustomerAccountResponse();
+        response.setAccountNumber(account.getAccountNumber());
+        response.setAccountStatus(account.getAccountStatus().name());
+        response.setAccountType(account.getAccountType());
+        return response;
+    }
+
+    // 5) Update minimum balance
+    public void updateMinimumBalance(String accountId, UpdateMinimumBalanceRequest request) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("ACC_404", "Account not found"));
+        account.setMinimumBalance(request.getMinimumBalance());
+        accountRepository.save(account);
     }
 
 
