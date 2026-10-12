@@ -17,7 +17,7 @@ public class IdGeneratorUtil {
     @Transactional
     public String generateId(String prefix, String entityName) {
 
-        IdSequence sequence = idSequenceRepository.findById(entityName).orElse(null);
+        IdSequence sequence = idSequenceRepository.findByEntityNameToUpdate(entityName).orElse(null);
 
         if (sequence == null) {
             sequence = new IdSequence();

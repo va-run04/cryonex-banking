@@ -23,7 +23,7 @@ Built end-to-end as a set of 46 REST endpoints across 8 business domains, fully 
 
 ## Overview
 
-CryoNex Banking is designed as a multi-module Maven project, where each business capability lives in its own Spring Boot microservice. `cryonex-customer-service` is the first and currently the only fully built module — it handles Customer Identity & Lifecycle Management (CILM):
+CryoNex Banking is designed as a multi-module Maven project, where each business capability lives in its own Spring Boot microservice. `cryonex-customer-service` is the first module, fully built — it handles Customer Identity & Lifecycle Management (CILM):
 
 - Customer onboarding, search, update, and status management
 - Address and contact management
@@ -33,7 +33,7 @@ CryoNex Banking is designed as a multi-module Maven project, where each business
 - A complete, append-only audit trail across every domain, exportable as PDF or Excel
 - JWT-based authentication with role-based endpoint authorization
 
-Future modules (`cryonex-account-service`, `cryonex-transaction-service`, etc.) will live alongside this one under the same parent project.
+`cryonex-account-service` is under development in the same parent project. Further modules (transaction service, etc.) are planned.
 
 ---
 
@@ -42,19 +42,20 @@ Future modules (`cryonex-account-service`, `cryonex-transaction-service`, etc.) 
 ```
 cryonex-banking/                    (parent Maven project)
 ├── pom.xml                         (manages shared dependency versions)
-└── cryonex-customer-service/       (this module)
-    ├── controller/                 8 REST controllers
-    ├── service/                    9 services (incl. StorageService, no controller)
-    ├── repository/                 8 Spring Data JPA repositories
-    ├── entity/                     8 JPA entities + BaseEntity + IdSequence
-    ├── dto/
-    │   ├── request/                Request DTOs (validated, never expose entities)
-    │   └── response/                Response DTOs
-    ├── enums/                      14 domain enums
-    ├── exception/                  Custom exceptions + centralized handler
-    ├── security/                   JWT filter
-    ├── config/                     Spring Security, JPA auditing config
-    └── util/                       ID generation, JWT utility
+├── cryonex-customer-service/       (this module)
+│   ├── controller/                 8 REST controllers
+│   ├── service/                    9 services (incl. StorageService, no controller)
+│   ├── repository/                 8 Spring Data JPA repositories
+│   ├── entity/                     8 JPA entities + BaseEntity + IdSequence
+│   ├── dto/
+│   │   ├── request/                Request DTOs (validated, never expose entities)
+│   │   └── response/                Response DTOs
+│   ├── enums/                      14 domain enums
+│   ├── exception/                  Custom exceptions + centralized handler
+│   ├── security/                   JWT filter
+│   ├── config/                     Spring Security, JPA auditing config
+│   └── util/                       ID generation, JWT utility
+└── cryonex-account-service/        (in development)
 ```
 
 **Design principles followed throughout:**
@@ -77,7 +78,7 @@ cryonex-banking/                    (parent Maven project)
 | Security | Spring Security, JWT (jjwt 0.12.6) |
 | Validation | Jakarta Bean Validation |
 | File Export | iText 7 (PDF), Apache POI (Excel) |
-| Testing | JUnit 5, Mockito |
+| Testing | JUnit 5, Mockito, Spring Boot Test (concurrency test against a separate MySQL test database) |
 | Build | Maven (multi-module) |
 | Tooling | IntelliJ IDEA, Postman, Git/GitHub |
 
@@ -137,6 +138,8 @@ mvn spring-boot:run
 The service starts on **`http://localhost:8081`**.
 
 ### 4. Run the tests
+
+MySQL must be running. The concurrency test uses a separate `cryonex_test` database, created automatically with the same credentials as your `application.yml`, so it never touches your real data.
 
 ```bash
 mvn test -pl cryonex-customer-service
@@ -223,13 +226,19 @@ A full Postman collection covering all 46 endpoints is included in this repo —
 
 ## Notable Engineering Decisions
 
-Two real, non-trivial bugs were found and fixed during development — both identified through independent testing and reasoning, not by design from the start.
+Two real, non-trivial bugs were found and fixed during development (the first one in two stages) — identified through testing and code review, not by design from the start.
 
-**1. ID-generation race condition (data-loss bug)**
+**1. ID generation: a collision bug, then a race in its own fix**
 
 The original ID strategy derived the next ID from `repository.count()`. Because `count()` reflects the *current* row count — which drops when a row is deleted — this could regenerate an ID that had already been issued to a still-existing row. In practice, this caused a re-uploaded PAN document to silently **overwrite** an existing Aadhaar document, since both ended up with the same generated ID.
 
-**Fix:** a dedicated `IdSequence` table — one row per entity type, tracking a monotonically increasing counter completely independent of the actual data tables. `IdGeneratorUtil` reads, increments, and saves this counter atomically. IDs are never reused, even across deletions.
+**First fix:** a dedicated `IdSequence` table — one row per entity type, tracking a monotonically increasing counter completely independent of the actual data tables. IDs are never reused, even across deletions.
+
+**Second bug, found by reviewing that fix:** it read the counter, incremented it and saved it with no lock, so two simultaneous requests could both read the same value and issue the same ID. `@Transactional` makes the steps all-or-nothing, but it does not stop two transactions from running at the same time. A concurrency test (`IdGeneratorUtilConcurrencyTest`) fires 20 simultaneous calls at a separate `cryonex_test` database. Before the fix it produced only **3 unique IDs out of 20**.
+
+**Second fix:** the counter row is now read with a pessimistic write lock (`@Lock(PESSIMISTIC_WRITE)`, which becomes `SELECT ... FOR UPDATE`), so simultaneous requests queue on the row. The same test now produces **20 unique IDs**.
+
+**Trade-offs:** the lock is held until the caller's transaction commits, so ID generation for the same entity type is serialised — fine at this scale. A very high-volume system would use database sequences or pre-allocated ID blocks instead. Also, the first call for a brand-new entity type has no row to lock yet, so counter rows should be seeded up front.
 
 **2. Missing transaction boundaries (data-consistency bug)**
 
