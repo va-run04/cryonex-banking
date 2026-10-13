@@ -6,9 +6,14 @@ import com.cryonex.account.dto.request.UpdateMinimumBalanceRequest;
 import com.cryonex.account.dto.request.UpdateNicknameRequest;
 import com.cryonex.account.dto.response.AccountBalanceResponse;
 import com.cryonex.account.dto.response.AccountResponse;
+
 import com.cryonex.account.dto.response.CustomerAccountResponse;
 import com.cryonex.account.service.AccountService;
 import jakarta.validation.Valid;
+import com.cryonex.account.dto.response.AccountSearchResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -67,5 +72,17 @@ public class AccountController {
         return ResponseEntity.ok(ApiResponse.success("Minimum balance updated successfully.", null));
     }
 
+    //6) Search Accounts
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('BANK_EMPLOYEE', 'ADMIN')")
+    public ResponseEntity<ApiResponse> searchAccounts(
+            @RequestParam(required = false) String customerId,
+            @RequestParam(required = false) String accountNumber,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String branchCode,
+            Pageable pageable) {
+        Page<AccountSearchResponse> result = accountService.searchAccounts(customerId, accountNumber, status, branchCode, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Accounts fetched successfully", result));
+    }
 
 }

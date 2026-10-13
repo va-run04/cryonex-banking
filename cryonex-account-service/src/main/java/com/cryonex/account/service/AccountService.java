@@ -4,7 +4,9 @@ import com.cryonex.account.dto.request.CreateAccountRequest;
 import com.cryonex.account.dto.request.UpdateMinimumBalanceRequest;
 import com.cryonex.account.dto.request.UpdateNicknameRequest;
 import com.cryonex.account.dto.response.AccountBalanceResponse;
+import org.springframework.data.domain.Pageable;
 import com.cryonex.account.dto.response.AccountResponse;
+import com.cryonex.account.dto.response.AccountSearchResponse;
 import com.cryonex.account.dto.response.CustomerAccountResponse;
 import com.cryonex.account.entity.Account;
 import com.cryonex.account.entity.AccountType;
@@ -14,8 +16,12 @@ import com.cryonex.account.exception.ResourceNotFoundException;
 import com.cryonex.account.repository.AccountRepository;
 import com.cryonex.account.repository.AccountTypeRepository;
 import com.cryonex.account.util.IdGeneratorUtil;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -119,6 +125,56 @@ public class AccountService {
         account.setMinimumBalance(request.getMinimumBalance());
         accountRepository.save(account);
     }
+
+    // 6) Search Accounts
+    public Page<AccountSearchResponse> searchAccounts(String customerId, String accountNumber,
+                                                      String status, String branchCode, Pageable pageable) {
+
+        Specification<Account> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (customerId != null) {
+                predicates.add(cb.equal(root.get("customerId"), customerId));
+            }
+            if (accountNumber != null) {
+                predicates.add(cb.equal(root.get("accountNumber"), accountNumber));
+            }
+            if (status != null) {
+                predicates.add(cb.equal(root.get("accountStatus"), parseStatus(status)));
+            }
+            if (branchCode != null) {
+                predicates.add(cb.equal(root.get("branchCode"), branchCode));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Account> accounts = accountRepository.findAll(spec, pageable);
+        return accounts.map(this::mapToSearchResponse);
+    }
+
+    private AccountStatus parseStatus(String status) {
+        try {
+            return AccountStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessValidationException("ACC_09", "Invalid account status: " + status);
+        }
+    }
+
+    private AccountSearchResponse mapToSearchResponse(Account account) {
+        AccountSearchResponse response = new AccountSearchResponse();
+        response.setAccountId(account.getAccountId());
+        response.setCustomerId(account.getCustomerId());
+        response.setAccountNumber(account.getAccountNumber());
+        response.setAccountType(account.getAccountType());
+        response.setBranchCode(account.getBranchCode());
+        response.setAccountStatus(account.getAccountStatus().name());
+        return response;
+    }
+
+
+
+
 
 
 }
