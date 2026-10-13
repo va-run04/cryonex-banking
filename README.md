@@ -226,9 +226,9 @@ A full Postman collection covering all 46 endpoints is included in this repo —
 
 ## Notable Engineering Decisions
 
-Two real, non-trivial bugs were found and fixed during development (the first one in two stages) — identified through testing and code review, not by design from the start.
+Two real, non-trivial bugs were found and fixed during development (the first one in three stages) — identified through testing and code review, not by design from the start.
 
-**1. ID generation: a collision bug, then a race in its own fix**
+**1. ID generation: a collision bug, then two races in its own fix**
 
 The original ID strategy derived the next ID from `repository.count()`. Because `count()` reflects the *current* row count — which drops when a row is deleted — this could regenerate an ID that had already been issued to a still-existing row. In practice, this caused a re-uploaded PAN document to silently **overwrite** an existing Aadhaar document, since both ended up with the same generated ID.
 
@@ -238,7 +238,11 @@ The original ID strategy derived the next ID from `repository.count()`. Because 
 
 **Second fix:** the counter row is now read with a pessimistic write lock (`@Lock(PESSIMISTIC_WRITE)`, which becomes `SELECT ... FOR UPDATE`), so simultaneous requests queue on the row. The same test now passes consistently, with all 20 IDs unique.
 
-**Trade-offs:** the lock is held until the caller's transaction commits, so ID generation for the same entity type is serialised — fine at this scale. A very high-volume system would use database sequences or pre-allocated ID blocks instead. **Known limitation:** the first call for a brand-new entity type has no counter row to lock yet, so two simultaneous first calls could still collide. Seeding the counter rows at startup is planned but not implemented yet.
+**Third bug, found by reviewing that fix and confirmed with a test:** the lock only works on a row that exists. When the counter row for an entity didn't exist yet, `SELECT ... FOR UPDATE` had nothing to lock, so simultaneous first calls all tried to create the row at once. A second test (`IdGeneratorUtilFirstCallConcurrencyTest`), run against an empty counter table, showed **9 of 20 calls failing with deadlock errors** (11 succeeded) before the fix.
+
+**Third fix:** `generateId` now first runs an atomic insert-if-absent (MySQL `INSERT ... ON DUPLICATE KEY UPDATE`, which does nothing if the row already exists), then takes the lock on a row that is guaranteed to exist. The same test now passes consistently: 20 calls, 0 failures, 20 unique IDs.
+
+**Trade-offs:** the lock is held until the caller's transaction commits, so ID generation for the same entity type is serialised — fine at this scale. A very high-volume system would use database sequences or pre-allocated ID blocks instead. The insert-if-absent adds one extra statement per ID, and it ties this code to MySQL syntax.
 
 **2. Missing transaction boundaries (data-consistency bug)**
 
