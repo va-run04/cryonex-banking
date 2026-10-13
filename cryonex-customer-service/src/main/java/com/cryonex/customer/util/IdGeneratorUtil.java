@@ -17,13 +17,11 @@ public class IdGeneratorUtil {
     @Transactional
     public String generateId(String prefix, String entityName) {
 
-        IdSequence sequence = idSequenceRepository.findByEntityNameToUpdate(entityName).orElse(null);
+        idSequenceRepository.insertIfAbsent(entityName, 100000L);
 
-        if (sequence == null) {
-            sequence = new IdSequence();
-            sequence.setEntityName(entityName);
-            sequence.setCurrentValue(100000L);
-        }
+        IdSequence sequence = idSequenceRepository.findByEntityNameToUpdate(entityName)
+                .orElseThrow(() -> new IllegalStateException(
+                        "ID counter row missing for entity: " + entityName));
 
         long nextValue = sequence.getCurrentValue() + 1;
         sequence.setCurrentValue(nextValue);
