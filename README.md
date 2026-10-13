@@ -234,11 +234,11 @@ The original ID strategy derived the next ID from `repository.count()`. Because 
 
 **First fix:** a dedicated `IdSequence` table — one row per entity type, tracking a monotonically increasing counter completely independent of the actual data tables. IDs are never reused, even across deletions.
 
-**Second bug, found by reviewing that fix:** it read the counter, incremented it and saved it with no lock, so two simultaneous requests could both read the same value and issue the same ID. `@Transactional` makes the steps all-or-nothing, but it does not stop two transactions from running at the same time. A concurrency test (`IdGeneratorUtilConcurrencyTest`) fires 20 simultaneous calls at a separate `cryonex_test` database. Before the fix it produced only **3 unique IDs out of 20**.
+**Second bug, found by reviewing that fix:** it read the counter, incremented it and saved it with no lock, so two simultaneous requests could both read the same value and issue the same ID. `@Transactional` makes the steps all-or-nothing, but it does not stop two transactions from running at the same time. A concurrency test (`IdGeneratorUtilConcurrencyTest`) fires 20 simultaneous calls at a separate `cryonex_test` database. In one run before the fix, only **3 of the 20 IDs were unique**; the exact number varies from run to run.
 
-**Second fix:** the counter row is now read with a pessimistic write lock (`@Lock(PESSIMISTIC_WRITE)`, which becomes `SELECT ... FOR UPDATE`), so simultaneous requests queue on the row. The same test now produces **20 unique IDs**.
+**Second fix:** the counter row is now read with a pessimistic write lock (`@Lock(PESSIMISTIC_WRITE)`, which becomes `SELECT ... FOR UPDATE`), so simultaneous requests queue on the row. The same test now passes consistently, with all 20 IDs unique.
 
-**Trade-offs:** the lock is held until the caller's transaction commits, so ID generation for the same entity type is serialised — fine at this scale. A very high-volume system would use database sequences or pre-allocated ID blocks instead. Also, the first call for a brand-new entity type has no row to lock yet, so counter rows should be seeded up front.
+**Trade-offs:** the lock is held until the caller's transaction commits, so ID generation for the same entity type is serialised — fine at this scale. A very high-volume system would use database sequences or pre-allocated ID blocks instead. **Known limitation:** the first call for a brand-new entity type has no counter row to lock yet, so two simultaneous first calls could still collide. Seeding the counter rows at startup is planned but not implemented yet.
 
 **2. Missing transaction boundaries (data-consistency bug)**
 
